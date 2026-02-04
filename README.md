@@ -1,97 +1,249 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# StablePay
 
-# Getting Started
+E2EE peer-to-peer stablecoin payments for iOS and Android.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Overview
 
-## Step 1: Start Metro
+StablePay is a self-custody mobile wallet for sending and receiving stablecoin payments. All private keys are generated and stored on-device, and all communication between users is end-to-end encrypted.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### Key Features
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **Self-custody**: 12-word recovery phrase, keys never leave device
+- **E2EE messaging**: Payment requests encrypted with X25519 + AES-256-GCM
+- **Gasless transactions**: ERC-4337 account abstraction (users don't need ETH/MATIC)
+- **Multi-network**: Polygon Amoy and Avalanche Fuji testnets
+- **Simple UX**: Pay and receive with @username or 6-digit ID
 
-```sh
-# Using npm
-npm start
+## Tech Stack
 
-# OR using Yarn
-yarn start
+- **Mobile**: React Native (bare CLI), TypeScript
+- **Blockchain**: ethers.js, ERC-4337 (Pimlico)
+- **Crypto**: @noble/curves, @noble/ciphers, @scure/bip39
+- **Storage**: react-native-keychain (Secure Enclave), op-sqlite
+- **Relay**: WebSocket server on Koyeb
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- Xcode 15+ (iOS)
+- Android Studio (Android)
+- CocoaPods 1.14+
+
+### Installation
+
+```bash
+# Clone the repo
+git clone <repo-url>
+cd StablePay
+
+# Install dependencies
+npm install
+
+# Install iOS pods
+cd ios && pod install && cd ..
 ```
 
-## Step 2: Build and run your app
+### Running the App
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+```bash
+# iOS
+npx react-native run-ios
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+# Android
+npx react-native run-android
 ```
 
-### iOS
+## Project Structure
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```
+src/
+├── app/                    # Navigation & app entry
+├── features/
+│   ├── onboarding/         # Wallet creation, recovery phrase
+│   ├── wallet/             # Home screen, balance
+│   ├── payments/           # Send, receive, requests
+│   ├── profile/            # Settings, network switching
+│   └── history/            # Transaction history
+├── core/
+│   ├── crypto/             # Key derivation, E2EE
+│   ├── blockchain/         # ethers.js, ERC-4337
+│   ├── storage/            # Keychain, SQLite
+│   └── websocket/          # Relay client
+├── shared/                 # Reusable components, hooks
+└── types/
 ```
 
-Then, and every time you update your native dependencies, run:
+## Architecture
 
-```sh
-bundle exec pod install
+```
+┌──────────────────────────────────────────────────────┐
+│                    USER DEVICE                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  │
+│  │  Keychain   │  │   SQLite    │  │  React Native│  │
+│  │ (encrypted) │  │  (local db) │  │     App      │  │
+│  └─────────────┘  └─────────────┘  └──────────────┘  │
+└──────────────────────────────────────────────────────┘
+                          │
+          ┌───────────────┴───────────────┐
+          ▼                               ▼
+   ┌─────────────┐                ┌──────────────┐
+   │  WebSocket  │                │     EVM      │
+   │   Relay     │                │  Blockchain  │
+   │  (Koyeb)    │                │ (Polygon/AVAX)│
+   └─────────────┘                └──────────────┘
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## Configuration
 
-```sh
-# Using npm
-npm run ios
+### Network Settings
 
-# OR using Yarn
-yarn ios
+Update `src/core/blockchain/networks.ts` with your deployed contract addresses:
+
+```typescript
+export const NETWORKS = {
+  'polygon-amoy': {
+    chainId: 80002,
+    stablecoinAddress: '0x...', // Your deployed dUSDT
+    bundlerUrl: 'https://api.pimlico.io/v2/80002/rpc?apikey=YOUR_KEY',
+    paymasterUrl: 'https://api.pimlico.io/v2/80002/rpc?apikey=YOUR_KEY',
+  },
+  'avalanche-fuji': {
+    chainId: 43113,
+    stablecoinAddress: '0x...',
+    bundlerUrl: 'https://api.pimlico.io/v2/43113/rpc?apikey=YOUR_KEY',
+    paymasterUrl: 'https://api.pimlico.io/v2/43113/rpc?apikey=YOUR_KEY',
+  },
+};
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Required API Keys
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+| Service | Purpose                          | Get it at          |
+| ------- | -------------------------------- | ------------------ |
+| Pimlico | Bundler + Paymaster (gasless tx) | https://pimlico.io |
 
-## Step 3: Modify your app
+## Smart Contract
 
-Now that you have successfully run the app, let's make changes!
+Deploy `DemoStablecoin.sol` to both testnets:
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+contract DemoStablecoin is ERC20 {
+    uint256 public constant FAUCET_AMOUNT = 100 * 10**18;
+    uint256 public constant FAUCET_COOLDOWN = 24 hours;
+    mapping(address => uint256) public lastFaucetClaim;
 
-## Congratulations! :tada:
+    constructor() ERC20("Demo USDT", "dUSDT") {
+        _mint(msg.sender, 1_000_000 * 10**18);
+    }
 
-You've successfully run and modified your React Native App. :partying_face:
+    function faucet() external {
+        require(block.timestamp >= lastFaucetClaim[msg.sender] + FAUCET_COOLDOWN);
+        lastFaucetClaim[msg.sender] = block.timestamp;
+        _mint(msg.sender, FAUCET_AMOUNT);
+    }
+}
+```
 
-### Now what?
+## WebSocket Relay Server
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+The relay handles user discovery and encrypted message routing. Deploy to Koyeb.
 
-# Troubleshooting
+**Endpoints:**
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+- `auth` — Authenticate with signed message
+- `register` — Register @username + public keys
+- `lookup` — Find user by @username or 6-digit ID
+- `payment_request` — Send E2EE payment request
+- `cancel_request` — Cancel pending request
 
-# Learn More
+See full spec for API details.
 
-To learn more about React Native, take a look at the following resources:
+## Security
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+| Layer           | Protection                          |
+| --------------- | ----------------------------------- |
+| Private keys    | Secure Enclave / Android Keystore   |
+| Transactions    | Biometric/PIN required to sign      |
+| Messages        | X25519 + AES-256-GCM encryption     |
+| Transport       | WebSocket over TLS                  |
+| Recovery phrase | Shown once, biometric to view again |
+
+## User Flows
+
+### Onboarding
+
+1. App generates 12-word recovery phrase
+2. User **must** confirm they saved it (no skip option)
+3. Keys derived and stored in Keychain
+4. User enters main interface
+
+### Send Payment
+
+1. Enter @username or 6-digit ID
+2. Enter amount + optional memo
+3. Confirm with biometric/PIN
+4. Transaction submitted via ERC-4337 (gasless)
+
+### Request Payment
+
+1. Enter who to request from
+2. Enter amount + note
+3. E2EE request sent via WebSocket
+4. Recipient sees popup, can pay or decline
+5. Requests expire after 1 hour
+
+## Dependencies
+
+```json
+{
+  "ethers": "^6.x",
+  "@scure/bip39": "latest",
+  "@scure/bip32": "latest",
+  "@noble/curves": "latest",
+  "@noble/ciphers": "latest",
+  "@noble/hashes": "latest",
+  "react-native-keychain": "latest",
+  "react-native-biometrics": "latest",
+  "@op-engineering/op-sqlite": "latest",
+  "@react-navigation/native": "latest",
+  "@react-navigation/native-stack": "latest",
+  "zustand": "latest",
+  "permissionless": "latest",
+  "viem": "latest"
+}
+```
+
+## Development Notes
+
+### Opening in Xcode
+
+Always use the workspace file:
+
+```
+ios/StablePay.xcworkspace  ✓
+ios/StablePay.xcodeproj    ✗
+```
+
+### Transaction History
+
+- Cached locally in SQLite
+- Syncs from chain when app opens (if online)
+- Falls back to cache silently if offline (no error shown)
+
+### Payment Requests
+
+- Stored on both sender and recipient devices
+- Expire after 1 hour
+- Either party can cancel
+- Status synced via WebSocket
+
+## License
+
+Proprietary — Demo purposes only.
