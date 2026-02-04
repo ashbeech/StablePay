@@ -16,29 +16,19 @@ import { base64ToUint8Array } from '../crypto/keyDerivation';
 import { getX25519PrivateKey } from '../storage';
 import { useAppStore, type PaymentRequest } from '../../store';
 
-// Callbacks for specific message types
 type LookupCallback = (
   result: LookupResultMessage['payload'] | null,
   error?: string,
 ) => void;
 type RequestCallback = (request: PaymentRequest) => void;
 
-// Pending lookup callbacks (keyed by query)
 const pendingLookups = new Map<string, LookupCallback>();
-
-// Incoming request callback
 let incomingRequestCallback: RequestCallback | null = null;
 
-/**
- * Initialize the message handler
- */
 export function initializeMessageHandler(): () => void {
   return wsClient.onMessage(handleMessage);
 }
 
-/**
- * Set callback for incoming payment requests
- */
 export function onIncomingRequest(callback: RequestCallback): () => void {
   incomingRequestCallback = callback;
   return () => {
@@ -46,14 +36,10 @@ export function onIncomingRequest(callback: RequestCallback): () => void {
   };
 }
 
-/**
- * Lookup a user with a promise-based API
- */
 export function lookupUser(
   query: string,
 ): Promise<LookupResultMessage['payload']> {
   return new Promise((resolve, reject) => {
-    // Set up callback
     pendingLookups.set(query, (result, error) => {
       pendingLookups.delete(query);
       if (error) {
@@ -65,13 +51,8 @@ export function lookupUser(
       }
     });
 
-    // Send lookup request
-    wsClient.send({
-      type: 'lookup',
-      payload: { query },
-    });
+    wsClient.send({ type: 'lookup', payload: { query } });
 
-    // Timeout after 10 seconds
     setTimeout(() => {
       if (pendingLookups.has(query)) {
         pendingLookups.delete(query);
@@ -81,9 +62,6 @@ export function lookupUser(
   });
 }
 
-/**
- * Handle incoming messages from the server
- */
 async function handleMessage(message: ServerMessage): Promise<void> {
   switch (message.type) {
     case 'lookup_result':
@@ -111,10 +89,7 @@ async function handleMessage(message: ServerMessage): Promise<void> {
       break;
 
     case 'register_error':
-      console.error(
-        '[MessageHandler] Registration error:',
-        message.payload.error,
-      );
+      console.error('[MessageHandler] Registration error:', message.payload.error);
       break;
 
     case 'error':
@@ -122,16 +97,12 @@ async function handleMessage(message: ServerMessage): Promise<void> {
       break;
 
     default:
-      // Ignore other message types (auth_success handled in client)
       break;
   }
 }
 
 function handleLookupResult(message: LookupResultMessage): void {
-  // Find the callback by checking which query this could match
-  // The server doesn't echo back the query, so we match by address
   for (const [query, callback] of pendingLookups) {
-    // This is a simplified match - real implementation should track request IDs
     callback(message.payload);
     pendingLookups.delete(query);
     return;
@@ -151,15 +122,9 @@ function handleLookupError(message: {
 
 async function handleIncomingPaymentRequest(message: {
   type: 'payment_request';
-  payload: {
-    from: string;
-    requestId: string;
-    encrypted: string;
-    expiresAt: number;
-  };
+  payload: { from: string; requestId: string; encrypted: string; expiresAt: number };
 }): Promise<void> {
   try {
-    // Get X25519 private key from storage
     const privateKeyBase64 = await getX25519PrivateKey();
     if (!privateKeyBase64) {
       console.error('[MessageHandler] No X25519 private key found');
@@ -167,14 +132,11 @@ async function handleIncomingPaymentRequest(message: {
     }
 
     const privateKey = base64ToUint8Array(privateKeyBase64);
-
-    // Decrypt the payload
     const decrypted = decryptFromTransmission<PaymentRequestPayload>(
       JSON.parse(message.payload.encrypted),
       privateKey,
     );
 
-    // Create PaymentRequest object
     const request: PaymentRequest = {
       id: decrypted.requestId,
       direction: 'received',
@@ -187,10 +149,8 @@ async function handleIncomingPaymentRequest(message: {
       createdAt: decrypted.createdAt,
     };
 
-    // Add to store
     useAppStore.getState().addRequest(request);
 
-    // Notify callback if set
     if (incomingRequestCallback) {
       incomingRequestCallback(request);
     }
@@ -228,8 +188,5 @@ function handleRegisterSuccess(message: {
     store.setUsername(message.payload.username);
   }
   store.setSixDigitId(message.payload.sixDigitId);
-  console.log(
-    '[MessageHandler] Registered with ID:',
-    message.payload.sixDigitId,
-  );
+  console.log('[MessageHandler] Registered with ID:', message.payload.sixDigitId);
 }

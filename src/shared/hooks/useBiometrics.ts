@@ -2,7 +2,6 @@
  * Biometrics Hook
  *
  * Handles biometric authentication for securing transactions.
- * Falls back to device passcode if biometrics not available.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -14,69 +13,44 @@ const rnBiometrics = new ReactNativeBiometrics({
 
 export type BiometricType = 'FaceID' | 'TouchID' | 'Biometrics' | 'None';
 
-interface BiometricState {
-  isAvailable: boolean;
-  biometricType: BiometricType;
-  isChecking: boolean;
-}
-
 export function useBiometrics() {
-  const [state, setState] = useState<BiometricState>({
-    isAvailable: false,
-    biometricType: 'None',
-    isChecking: true,
-  });
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState<BiometricType>('None');
+  const [isChecking, setIsChecking] = useState(true);
 
-  // Check biometric availability on mount
   useEffect(() => {
     checkBiometrics();
   }, []);
 
   const checkBiometrics = async () => {
-    setState(prev => ({ ...prev, isChecking: true }));
-
+    setIsChecking(true);
     try {
       const { available, biometryType } =
         await rnBiometrics.isSensorAvailable();
-
-      let type: BiometricType = 'None';
+      setIsAvailable(available);
       if (available) {
         switch (biometryType) {
           case BiometryTypes.FaceID:
-            type = 'FaceID';
+            setBiometricType('FaceID');
             break;
           case BiometryTypes.TouchID:
-            type = 'TouchID';
+            setBiometricType('TouchID');
             break;
           case BiometryTypes.Biometrics:
-            type = 'Biometrics';
+            setBiometricType('Biometrics');
             break;
           default:
-            type = 'None';
+            setBiometricType('None');
         }
       }
-
-      setState({
-        isAvailable: available,
-        biometricType: type,
-        isChecking: false,
-      });
-    } catch (error) {
-      console.error('Failed to check biometrics:', error);
-      setState({
-        isAvailable: false,
-        biometricType: 'None',
-        isChecking: false,
-      });
+    } catch {
+      setIsAvailable(false);
+      setBiometricType('None');
+    } finally {
+      setIsChecking(false);
     }
   };
 
-  /**
-   * Prompt the user for biometric authentication
-   *
-   * @param promptMessage - The message to show in the prompt
-   * @returns true if authenticated, false otherwise
-   */
   const authenticate = useCallback(
     async (
       promptMessage: string = 'Confirm your identity',
@@ -86,21 +60,16 @@ export function useBiometrics() {
           promptMessage,
           cancelButtonText: 'Cancel',
         });
-
         return success;
-      } catch (error) {
-        console.error('Biometric authentication failed:', error);
+      } catch {
         return false;
       }
     },
     [],
   );
 
-  /**
-   * Get a human-readable name for the biometric type
-   */
   const getBiometricName = useCallback((): string => {
-    switch (state.biometricType) {
+    switch (biometricType) {
       case 'FaceID':
         return 'Face ID';
       case 'TouchID':
@@ -110,10 +79,12 @@ export function useBiometrics() {
       default:
         return 'Passcode';
     }
-  }, [state.biometricType]);
+  }, [biometricType]);
 
   return {
-    ...state,
+    isAvailable,
+    biometricType,
+    isChecking,
     authenticate,
     getBiometricName,
     checkBiometrics,

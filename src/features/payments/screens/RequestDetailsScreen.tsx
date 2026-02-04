@@ -44,7 +44,6 @@ export function RequestDetailsScreen() {
   const [isDeclining, setIsDeclining] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
 
-  // Find the request
   const request = pendingRequests.find(r => r.id === requestId);
 
   // Update countdown timer
@@ -57,7 +56,6 @@ export function RequestDetailsScreen() {
 
     updateTime();
     const interval = setInterval(updateTime, 1000);
-
     return () => clearInterval(interval);
   }, [request]);
 
@@ -78,7 +76,6 @@ export function RequestDetailsScreen() {
   const handlePay = useCallback(async () => {
     if (!request) return;
 
-    // Authenticate with biometrics
     const authenticated = await authenticate(
       `Pay $${request.amount} to ${
         request.counterpartyUsername ||
@@ -100,21 +97,12 @@ export function RequestDetailsScreen() {
         selectedNetwork,
       );
 
-      // Mark as paid
       updateRequest(request.id, { status: 'paid' });
 
       Alert.alert(
         'Payment Sent!',
-        `Successfully paid $${request.amount}.\n\nTx: ${txHash.slice(
-          0,
-          20,
-        )}...`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ],
+        `Successfully paid $${request.amount}.\n\nTx: ${txHash.slice(0, 20)}...`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     } catch (error) {
       Alert.alert(
@@ -148,17 +136,11 @@ export function RequestDetailsScreen() {
     );
   }, [request, navigation]);
 
-  // Request not found or already handled
   if (!request) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Button
-            title="← Back"
-            onPress={handleBack}
-            variant="outline"
-            size="small"
-          />
+          <Button title="← Back" onPress={handleBack} variant="outline" size="small" />
           <Text style={styles.headerTitle}>Request</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -176,22 +158,14 @@ export function RequestDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
-        <Button
-          title="← Back"
-          onPress={handleBack}
-          variant="outline"
-          size="small"
-        />
+        <Button title="← Back" onPress={handleBack} variant="outline" size="small" />
         <Text style={styles.headerTitle}>Payment Request</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.content}>
-        {/* Request Card */}
         <View style={styles.card}>
-          {/* Status Badge */}
           <View
             style={[
               styles.statusBadge,
@@ -204,12 +178,10 @@ export function RequestDetailsScreen() {
             <Text style={styles.statusText}>
               {isActive
                 ? 'Pending'
-                : request.status.charAt(0).toUpperCase() +
-                  request.status.slice(1)}
+                : request.status.charAt(0).toUpperCase() + request.status.slice(1)}
             </Text>
           </View>
 
-          {/* From */}
           <Text style={styles.fromLabel}>
             {request.direction === 'received' ? 'From' : 'To'}
           </Text>
@@ -219,12 +191,10 @@ export function RequestDetailsScreen() {
               : shortenAddress(request.counterpartyAddress)}
           </Text>
 
-          {/* Amount */}
           <Text style={styles.amountLabel}>Amount</Text>
           <Text style={styles.amountValue}>${request.amount}</Text>
           <Text style={styles.currency}>dUSDT</Text>
 
-          {/* Memo */}
           {request.memo && (
             <>
               <Text style={styles.memoLabel}>Note</Text>
@@ -232,7 +202,6 @@ export function RequestDetailsScreen() {
             </>
           )}
 
-          {/* Time Remaining */}
           {isActive && (
             <View style={styles.timerContainer}>
               <Text style={styles.timerLabel}>Expires in</Text>
@@ -241,7 +210,6 @@ export function RequestDetailsScreen() {
           )}
         </View>
 
-        {/* Action Buttons (only for received pending requests) */}
         {isActive && request.direction === 'received' && (
           <View style={styles.actions}>
             <Button
@@ -262,7 +230,6 @@ export function RequestDetailsScreen() {
           </View>
         )}
 
-        {/* Cancel button for sent requests */}
         {isActive && request.direction === 'sent' && (
           <Button
             title="Cancel Request"
@@ -273,7 +240,6 @@ export function RequestDetailsScreen() {
           />
         )}
 
-        {/* Biometric hint */}
         {isActive && request.direction === 'received' && (
           <Text style={styles.biometricHint}>
             Requires {getBiometricName()} to pay
@@ -285,10 +251,7 @@ export function RequestDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,22 +266,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
-  headerSpacer: {
-    width: 70,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: typography.fontSize.md,
-    color: colors.textSecondary,
-  },
+  headerSpacer: { width: 70 },
+  content: { flex: 1, padding: spacing.lg },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { fontSize: typography.fontSize.md, color: colors.textSecondary },
   card: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
@@ -334,37 +285,23 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     marginBottom: spacing.lg,
   },
-  statusPending: {
-    backgroundColor: colors.warning + '20',
-  },
-  statusPaid: {
-    backgroundColor: colors.success + '20',
-  },
-  statusCancelled: {
-    backgroundColor: colors.error + '20',
-  },
-  statusExpired: {
-    backgroundColor: colors.gray200,
-  },
+  statusPending: { backgroundColor: colors.warning + '20' },
+  statusPaid: { backgroundColor: colors.success + '20' },
+  statusCancelled: { backgroundColor: colors.error + '20' },
+  statusExpired: { backgroundColor: colors.gray200 },
   statusText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
-  fromLabel: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textTertiary,
-  },
+  fromLabel: { fontSize: typography.fontSize.sm, color: colors.textTertiary },
   fromValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
     marginBottom: spacing.lg,
   },
-  amountLabel: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textTertiary,
-  },
+  amountLabel: { fontSize: typography.fontSize.sm, color: colors.textTertiary },
   amountValue: {
     fontSize: typography.fontSize.display,
     fontWeight: typography.fontWeight.bold,
@@ -386,14 +323,8 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  timerContainer: {
-    marginTop: spacing.lg,
-    alignItems: 'center',
-  },
-  timerLabel: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
-  },
+  timerContainer: { marginTop: spacing.lg, alignItems: 'center' },
+  timerLabel: { fontSize: typography.fontSize.xs, color: colors.textTertiary },
   timerValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
@@ -404,12 +335,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-  declineButton: {
-    flex: 1,
-  },
-  payButton: {
-    flex: 1,
-  },
+  declineButton: { flex: 1 },
+  payButton: { flex: 1 },
   biometricHint: {
     fontSize: typography.fontSize.xs,
     color: colors.textTertiary,

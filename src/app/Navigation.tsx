@@ -1,9 +1,5 @@
 /**
  * Navigation Configuration
- *
- * Handles routing between screens based on app state:
- * - Onboarding: Shown if user hasn't completed wallet setup
- * - Main: Home screen and authenticated routes
  */
 
 import React from 'react';
@@ -16,6 +12,10 @@ import {
   ReceiveScreen,
   RequestDetailsScreen,
 } from '../features/payments';
+<<<<<<< HEAD
+=======
+import { ProfileScreen } from '../features/profile';
+>>>>>>> 5aae11a (Add Profile screen, WebSocket client plumbing, and SQLite transaction cache)
 import { useAppStore } from '../store';
 
 export type RootStackParamList = {
@@ -24,8 +24,12 @@ export type RootStackParamList = {
   Send: undefined;
   Receive: undefined;
   RequestDetails: { requestId: string };
+<<<<<<< HEAD
   // Future screens:
   // Profile: undefined;
+=======
+  Profile: undefined;
+>>>>>>> 5aae11a (Add Profile screen, WebSocket client plumbing, and SQLite transaction cache)
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,19 +40,20 @@ export function Navigation() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          animation: 'slide_from_right',
-        }}
+        screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
       >
         {!isOnboardingComplete ? (
           <Stack.Screen
             name="Onboarding"
             component={OnboardingScreen}
+<<<<<<< HEAD
             options={{
               gestureEnabled: false,
               animation: 'fade',
             }}
+=======
+            options={{ gestureEnabled: false, animation: 'fade' }}
+>>>>>>> 5aae11a (Add Profile screen, WebSocket client plumbing, and SQLite transaction cache)
           />
         ) : (
           <>
@@ -58,10 +63,15 @@ export function Navigation() {
             <Stack.Screen
               name="RequestDetails"
               component={RequestDetailsScreen}
+<<<<<<< HEAD
               options={{
                 presentation: 'modal',
               }}
+=======
+              options={{ presentation: 'modal' }}
+>>>>>>> 5aae11a (Add Profile screen, WebSocket client plumbing, and SQLite transaction cache)
             />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
           </>
         )}
       </Stack.Navigator>

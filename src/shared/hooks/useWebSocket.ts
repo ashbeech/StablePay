@@ -56,17 +56,12 @@ export function useWebSocket() {
     };
 
     initializeWebSocket();
-
-    return () => {
-      // Don't disconnect on unmount - keep connection alive
-    };
   }, [isOnboardingComplete]);
 
   // Handle app state changes (reconnect when coming to foreground)
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (nextState === 'active' && isOnboardingComplete) {
-        // Reconnect if disconnected
         if (!wsClient.isReady()) {
           wsClient.connect();
         }
@@ -80,7 +75,6 @@ export function useWebSocket() {
     return () => subscription.remove();
   }, [isOnboardingComplete]);
 
-  // Manual connect/disconnect
   const connect = useCallback(() => {
     wsClient.connect();
   }, []);

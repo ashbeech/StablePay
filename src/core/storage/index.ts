@@ -3,3 +3,4 @@
  */
 
 export * from './keychain';
+export * from './database';

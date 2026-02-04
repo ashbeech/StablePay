@@ -1,11 +1,7 @@
 /**
  * Home Screen
  *
- * Main wallet interface showing:
- * - Header with profile button and logo
- * - Balance display (fetched from blockchain)
- * - Pay/Receive action buttons
- * - Recent activity list
+ * Main wallet interface with balance, actions, and transaction history.
  */
 
 import React, { useCallback, useEffect } from 'react';
@@ -21,13 +17,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, spacing, header as headerConfig } from '../../../app/theme';
+import {
+  colors,
+  spacing,
+  typography,
+  header as headerConfig,
+} from '../../../app/theme';
 import { Logo } from '../../../shared/components';
 import { useWebSocket } from '../../../shared/hooks';
 import { BalanceDisplay } from '../components/BalanceDisplay';
 import { ActionButtons } from '../components/ActionButtons';
 import { TransactionList } from '../components/TransactionList';
 import { useBalance } from '../hooks/useBalance';
+import { useTransactions } from '../hooks/useTransactions';
 import { onIncomingRequest } from '../../../core/websocket';
 import { expireOldRequests } from '../../payments/services/paymentRequestService';
 import { useAppStore, type PaymentRequest } from '../../../store';
@@ -37,14 +39,16 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { transactions, pendingRequests } = useAppStore();
-  const { balance, isLoading, refreshBalance } = useBalance();
+  const { pendingRequests } = useAppStore();
+  const { balance, isLoading: isBalanceLoading, refreshBalance } = useBalance();
+  const { transactions, isSyncing, syncTransactions } = useTransactions();
   const { isAuthenticated, connectionState } = useWebSocket();
+
+  const isLoading = isBalanceLoading || isSyncing;
 
   // Handle incoming payment requests
   useEffect(() => {
     const unsubscribe = onIncomingRequest((request: PaymentRequest) => {
-      // Show alert for incoming request
       Alert.alert(
         'Payment Request',
         `${
@@ -71,7 +75,7 @@ export function HomeScreen() {
   // Expire old requests periodically
   useEffect(() => {
     expireOldRequests();
-    const interval = setInterval(expireOldRequests, 60000); // Check every minute
+    const interval = setInterval(expireOldRequests, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -84,11 +88,8 @@ export function HomeScreen() {
   }, [navigation]);
 
   const handleProfilePress = useCallback(() => {
-    Alert.alert(
-      'Coming Soon',
-      'Profile screen will be implemented in Phase 4.',
-    );
-  }, []);
+    navigation.navigate('Profile');
+  }, [navigation]);
 
   const handleRequestPress = useCallback(
     (request: PaymentRequest) => {
@@ -98,8 +99,8 @@ export function HomeScreen() {
   );
 
   const handleRefresh = useCallback(async () => {
-    await refreshBalance();
-  }, [refreshBalance]);
+    await Promise.all([refreshBalance(), syncTransactions()]);
+  }, [refreshBalance, syncTransactions]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -144,17 +145,12 @@ export function HomeScreen() {
           />
         }
       >
-        {/* Balance */}
         <BalanceDisplay
           balance={balance}
           currency="dUSDT"
-          isLoading={isLoading}
+          isLoading={isBalanceLoading}
         />
-
-        {/* Action Buttons */}
         <ActionButtons onPay={handlePay} onReceive={handleReceive} />
-
-        {/* Transactions */}
         <TransactionList
           transactions={transactions}
           pendingRequests={pendingRequests}
@@ -166,10 +162,7 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     height: headerConfig.height,
     flexDirection: 'row',
@@ -187,40 +180,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  profileIcon: {
-    fontSize: 20,
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  headerSpacer: {
-    width: 40,
-  },
+  profileIcon: { fontSize: 20 },
+  headerCenter: { alignItems: 'center' },
+  headerSpacer: { width: 40 },
   connectionStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
-  },
-  statusOnline: {
-    backgroundColor: colors.success,
-  },
-  statusOffline: {
-    backgroundColor: colors.gray400,
-  },
-  statusText: {
-    fontSize: 10,
-    color: colors.textTertiary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xxl,
-  },
+  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 4 },
+  statusOnline: { backgroundColor: colors.success },
+  statusOffline: { backgroundColor: colors.gray400 },
+  statusText: { fontSize: 10, color: colors.textTertiary },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: spacing.xxl },
 });

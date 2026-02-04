@@ -13,15 +13,13 @@ import {
   RELAY_SERVER_URL,
   type ClientMessage,
   type ServerMessage,
-  type ConnectionState,
   type WebSocketState,
 } from './types';
 
-// Reconnection settings
-const INITIAL_RECONNECT_DELAY = 1000; // 1 second
-const MAX_RECONNECT_DELAY = 30000; // 30 seconds
+const INITIAL_RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_DELAY = 30000;
 const MAX_RECONNECT_ATTEMPTS = 10;
-const PING_INTERVAL = 30000; // 30 seconds
+const PING_INTERVAL = 30000;
 
 type MessageHandler = (message: ServerMessage) => void;
 type StateChangeHandler = (state: WebSocketState) => void;
@@ -44,17 +42,11 @@ export class WebSocketClient {
   private pingTimer: NodeJS.Timeout | null = null;
   private messageQueue: ClientMessage[] = [];
 
-  /**
-   * Initialize the client with wallet credentials
-   */
   initialize(privateKey: string, address: string): void {
     this.privateKey = privateKey;
     this.address = address;
   }
 
-  /**
-   * Connect to the relay server
-   */
   connect(): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       console.log('[WS] Already connected');
@@ -70,50 +62,33 @@ export class WebSocketClient {
 
     try {
       this.ws = new WebSocket(RELAY_SERVER_URL);
-
       this.ws.onopen = this.handleOpen.bind(this);
       this.ws.onmessage = this.handleMessage.bind(this);
       this.ws.onclose = this.handleClose.bind(this);
       this.ws.onerror = this.handleError.bind(this);
     } catch (error) {
       console.error('[WS] Connection error:', error);
-      this.updateState({
-        connectionState: 'error',
-        lastError: 'Failed to connect',
-      });
+      this.updateState({ connectionState: 'error', lastError: 'Failed to connect' });
       this.scheduleReconnect();
     }
   }
 
-  /**
-   * Disconnect from the server
-   */
   disconnect(): void {
     this.clearTimers();
-    this.state.reconnectAttempts = MAX_RECONNECT_ATTEMPTS; // Prevent auto-reconnect
-
+    this.state.reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');
       this.ws = null;
     }
-
-    this.updateState({
-      connectionState: 'disconnected',
-      isAuthenticated: false,
-    });
+    this.updateState({ connectionState: 'disconnected', isAuthenticated: false });
   }
 
-  /**
-   * Send a message to the server
-   */
   send(message: ClientMessage): boolean {
     if (this.ws?.readyState !== WebSocket.OPEN) {
-      // Queue message for later if not connected
       this.messageQueue.push(message);
       console.log('[WS] Message queued (not connected)');
       return false;
     }
-
     try {
       this.ws.send(JSON.stringify(message));
       return true;
@@ -124,50 +99,28 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Subscribe to incoming messages
-   */
   onMessage(handler: MessageHandler): () => void {
     this.messageHandlers.add(handler);
     return () => this.messageHandlers.delete(handler);
   }
 
-  /**
-   * Subscribe to state changes
-   */
   onStateChange(handler: StateChangeHandler): () => void {
     this.stateChangeHandlers.add(handler);
-    // Immediately call with current state
     handler(this.state);
     return () => this.stateChangeHandlers.delete(handler);
   }
 
-  /**
-   * Get current connection state
-   */
   getState(): WebSocketState {
     return { ...this.state };
   }
 
-  /**
-   * Check if connected and authenticated
-   */
   isReady(): boolean {
-    return (
-      this.state.connectionState === 'connected' && this.state.isAuthenticated
-    );
+    return this.state.connectionState === 'connected' && this.state.isAuthenticated;
   }
-
-  // ============================================================================
-  // Private Methods
-  // ============================================================================
 
   private handleOpen(): void {
     console.log('[WS] Connected, authenticating...');
-    this.updateState({
-      connectionState: 'authenticating',
-      reconnectAttempts: 0,
-    });
+    this.updateState({ connectionState: 'authenticating', reconnectAttempts: 0 });
     this.authenticate();
   }
 
@@ -178,24 +131,16 @@ export class WebSocketClient {
       const timestamp = Math.floor(Date.now() / 1000);
       const message = `${this.address}${timestamp}`;
       const messageHash = ethers.keccak256(ethers.toUtf8Bytes(message));
-
       const wallet = new ethers.Wallet(this.privateKey);
       const signature = await wallet.signMessage(ethers.getBytes(messageHash));
 
       this.send({
         type: 'auth',
-        payload: {
-          address: this.address,
-          timestamp,
-          signature,
-        },
+        payload: { address: this.address, timestamp, signature },
       });
     } catch (error) {
       console.error('[WS] Auth error:', error);
-      this.updateState({
-        connectionState: 'error',
-        lastError: 'Authentication failed',
-      });
+      this.updateState({ connectionState: 'error', lastError: 'Authentication failed' });
     }
   }
 
@@ -203,13 +148,9 @@ export class WebSocketClient {
     try {
       const message = JSON.parse(event.data) as ServerMessage;
 
-      // Handle auth responses
       if (message.type === 'auth_success') {
         console.log('[WS] Authenticated');
-        this.updateState({
-          connectionState: 'connected',
-          isAuthenticated: true,
-        });
+        this.updateState({ connectionState: 'connected', isAuthenticated: true });
         this.startPingTimer();
         this.flushMessageQueue();
       } else if (message.type === 'auth_error') {
@@ -223,12 +164,8 @@ export class WebSocketClient {
         return;
       }
 
-      // Handle pong
-      if (message.type === 'pong') {
-        return; // Just a keep-alive response
-      }
+      if (message.type === 'pong') return;
 
-      // Dispatch to handlers
       this.messageHandlers.forEach(handler => {
         try {
           handler(message);
@@ -245,24 +182,13 @@ export class WebSocketClient {
     console.log('[WS] Disconnected:', event.code, event.reason);
     this.clearTimers();
     this.ws = null;
-
-    this.updateState({
-      connectionState: 'disconnected',
-      isAuthenticated: false,
-    });
-
-    // Auto-reconnect if not intentional disconnect
-    if (event.code !== 1000) {
-      this.scheduleReconnect();
-    }
+    this.updateState({ connectionState: 'disconnected', isAuthenticated: false });
+    if (event.code !== 1000) this.scheduleReconnect();
   }
 
   private handleError(event: Event): void {
     console.error('[WS] Error:', event);
-    this.updateState({
-      connectionState: 'error',
-      lastError: 'Connection error',
-    });
+    this.updateState({ connectionState: 'error', lastError: 'Connection error' });
   }
 
   private scheduleReconnect(): void {
@@ -277,21 +203,15 @@ export class WebSocketClient {
     );
 
     console.log(`[WS] Reconnecting in ${delay}ms...`);
-
     this.reconnectTimer = setTimeout(() => {
-      this.updateState({
-        reconnectAttempts: this.state.reconnectAttempts + 1,
-      });
+      this.updateState({ reconnectAttempts: this.state.reconnectAttempts + 1 });
       this.connect();
     }, delay);
   }
 
   private startPingTimer(): void {
     this.pingTimer = setInterval(() => {
-      this.send({
-        type: 'ping',
-        payload: { timestamp: Date.now() },
-      });
+      this.send({ type: 'ping', payload: { timestamp: Date.now() } });
     }, PING_INTERVAL);
   }
 
@@ -309,9 +229,7 @@ export class WebSocketClient {
   private flushMessageQueue(): void {
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
-      if (message) {
-        this.send(message);
-      }
+      if (message) this.send(message);
     }
   }
 
@@ -327,5 +245,4 @@ export class WebSocketClient {
   }
 }
 
-// Singleton instance
 export const wsClient = new WebSocketClient();

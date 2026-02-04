@@ -62,12 +62,7 @@ export function ReceiveScreen() {
         Alert.alert(
           'Request Sent',
           `Payment request for $${amount} sent successfully.\n\nExpires in 1 hour.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ],
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
         );
       } else {
         setError(result.error || 'Failed to send request');
@@ -93,6 +88,13 @@ export function ReceiveScreen() {
     }
   }, [sixDigitId]);
 
+  const handleCopyAddress = useCallback(() => {
+    if (walletAddress) {
+      Clipboard.setString(walletAddress);
+      Alert.alert('Copied', 'Address copied to clipboard');
+    }
+  }, [walletAddress]);
+
   const canSubmit = recipientInput && parseFloat(amount) > 0 && !isSending;
 
   return (
@@ -101,14 +103,8 @@ export function ReceiveScreen() {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
         <View style={styles.header}>
-          <Button
-            title="← Back"
-            onPress={handleBack}
-            variant="outline"
-            size="small"
-          />
+          <Button title="← Back" onPress={handleBack} variant="outline" size="small" />
           <Text style={styles.headerTitle}>Request Payment</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -118,7 +114,6 @@ export function ReceiveScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Request Form */}
           <View style={styles.section}>
             <Text style={styles.label}>From</Text>
             <RecipientInput
@@ -130,20 +125,13 @@ export function ReceiveScreen() {
 
           <View style={styles.section}>
             <Text style={styles.label}>Amount</Text>
-            <AmountInput
-              value={amount}
-              onChangeValue={setAmount}
-              currency="dUSDT"
-            />
+            <AmountInput value={amount} onChangeValue={setAmount} currency="dUSDT" />
           </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>Note (optional)</Text>
             <View style={styles.noteContainer}>
-              <Text
-                style={[styles.noteText, !memo && styles.notePlaceholder]}
-                numberOfLines={2}
-              >
+              <Text style={[styles.noteText, !memo && styles.notePlaceholder]} numberOfLines={2}>
                 {memo || "What's this for?"}
               </Text>
             </View>
@@ -164,46 +152,37 @@ export function ReceiveScreen() {
             style={styles.sendButton}
           />
 
-          {/* Divider */}
           <View style={styles.divider} />
 
-          {/* Your Info Section */}
           <Text style={styles.sectionTitle}>Share Your Info</Text>
-          <Text style={styles.sectionSubtitle}>
-            Others can send you payments using:
-          </Text>
+          <Text style={styles.sectionSubtitle}>Others can send you payments using:</Text>
 
-          {/* Username */}
-          <TouchableOpacity
-            style={styles.infoCard}
-            onPress={handleCopyUsername}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.infoCard} onPress={handleCopyUsername} activeOpacity={0.7}>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Your @username</Text>
-              <Text style={styles.infoValue}>
-                {username ? `@${username}` : 'Not set'}
-              </Text>
+              <Text style={styles.infoValue}>{username ? `@${username}` : 'Not set'}</Text>
             </View>
             <Text style={styles.copyHint}>Tap to copy</Text>
           </TouchableOpacity>
 
-          {/* 6-Digit ID */}
-          <TouchableOpacity
-            style={styles.infoCard}
-            onPress={handleCopySixDigitId}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.infoCard} onPress={handleCopySixDigitId} activeOpacity={0.7}>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Your 6-Digit ID</Text>
-              <Text style={styles.infoValue}>
-                {sixDigitId || 'Not registered'}
+              <Text style={styles.infoValue}>{sixDigitId || 'Not registered'}</Text>
+            </View>
+            <Text style={styles.copyHint}>Tap to copy</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.infoCard} onPress={handleCopyAddress} activeOpacity={0.7}>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Wallet Address</Text>
+              <Text style={styles.infoValueSmall} numberOfLines={1}>
+                {walletAddress || 'Not available'}
               </Text>
             </View>
             <Text style={styles.copyHint}>Tap to copy</Text>
           </TouchableOpacity>
 
-          {/* Note about registration */}
           {!sixDigitId && (
             <Text style={styles.registrationNote}>
               Connect to the relay server to get your 6-digit ID
@@ -216,13 +195,8 @@ export function ReceiveScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  keyboardView: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -237,19 +211,10 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
-  headerSpacer: {
-    width: 70,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
+  headerSpacer: { width: 70 },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  section: { marginBottom: spacing.lg },
   label: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
@@ -264,31 +229,17 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     minHeight: 60,
   },
-  noteText: {
-    fontSize: typography.fontSize.md,
-    color: colors.textPrimary,
-  },
-  notePlaceholder: {
-    color: colors.textTertiary,
-  },
+  noteText: { fontSize: typography.fontSize.md, color: colors.textPrimary },
+  notePlaceholder: { color: colors.textTertiary },
   errorContainer: {
     backgroundColor: colors.error + '15',
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
-  errorText: {
-    color: colors.error,
-    fontSize: typography.fontSize.sm,
-  },
-  sendButton: {
-    marginBottom: spacing.lg,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.lg,
-  },
+  errorText: { color: colors.error, fontSize: typography.fontSize.sm },
+  sendButton: { marginBottom: spacing.lg },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
@@ -309,23 +260,15 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textTertiary,
-    marginBottom: 2,
-  },
+  infoContent: { flex: 1 },
+  infoLabel: { fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: 2 },
   infoValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
-  copyHint: {
-    fontSize: typography.fontSize.xs,
-    color: colors.primary,
-  },
+  infoValueSmall: { fontSize: typography.fontSize.sm, color: colors.textPrimary, fontFamily: 'monospace' },
+  copyHint: { fontSize: typography.fontSize.xs, color: colors.primary },
   registrationNote: {
     fontSize: typography.fontSize.xs,
     color: colors.textTertiary,
