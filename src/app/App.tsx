@@ -15,8 +15,13 @@ import { Navigation } from './Navigation';
 import { colors } from './theme';
 import { Logo } from '../shared/components';
 import { useAppStore } from '../store';
-import { getMnemonic, isOnboardingComplete } from '../core/storage';
-import { deriveEthereumWallet } from '../core/crypto';
+import {
+  getMnemonic,
+  isOnboardingComplete,
+  getX25519PrivateKey,
+} from '../core/storage';
+import { deriveEthereumWallet, deriveX25519Keys } from '../core/crypto';
+import { wsClient, registerUser } from '../core/websocket';
 
 export function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -34,12 +39,35 @@ export function App() {
       const onboardingDone = await isOnboardingComplete();
       setOnboardingComplete(onboardingDone);
 
-      // If onboarding complete, load wallet address
+      // If onboarding complete, load wallet and connect WebSocket
       if (onboardingDone) {
         const mnemonic = await getMnemonic();
         if (mnemonic) {
+          // Derive wallet
           const wallet = await deriveEthereumWallet(mnemonic);
           setWalletAddress(wallet.address);
+
+          // Get or derive X25519 keys
+          let x25519PublicKeyBase64 = await getX25519PrivateKey();
+          if (!x25519PublicKeyBase64) {
+            const x25519Keys = await deriveX25519Keys(mnemonic);
+            x25519PublicKeyBase64 = x25519Keys.publicKeyBase64;
+          } else {
+            // We have the private key, need to derive public
+            const x25519Keys = await deriveX25519Keys(mnemonic);
+            x25519PublicKeyBase64 = x25519Keys.publicKeyBase64;
+          }
+
+          // Initialize WebSocket connection
+          wsClient.initialize(wallet.privateKeyHex, wallet.address);
+          wsClient.connect();
+
+          // Register with relay once connected
+          wsClient.onStateChange(state => {
+            if (state.isAuthenticated) {
+              registerUser(x25519PublicKeyBase64!);
+            }
+          });
         }
       }
 

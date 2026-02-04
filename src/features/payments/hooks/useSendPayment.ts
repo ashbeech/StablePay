@@ -2,15 +2,17 @@
  * Send Payment Hook
  *
  * Manages the state and logic for sending a payment.
+ * Supports lookup by @username, 6-digit ID, or direct address.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '../../../store';
 import {
   sendPayment,
   validatePayment,
 } from '../../wallet/services/walletService';
 import { isValidAddress } from '../../../core/blockchain';
+import { lookupAny, type UserProfile } from '../../../core/websocket';
 
 interface SendPaymentState {
   recipientInput: string;
@@ -25,7 +27,8 @@ interface SendPaymentState {
 }
 
 export function useSendPayment() {
-  const { balance, selectedNetwork } = useAppStore();
+  const { balance, selectedNetwork, isConnected } = useAppStore();
+  const lookupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [state, setState] = useState<SendPaymentState>({
     recipientInput: '',
@@ -39,42 +42,88 @@ export function useSendPayment() {
     sendError: null,
   });
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (lookupTimeoutRef.current) {
+        clearTimeout(lookupTimeoutRef.current);
+      }
+    };
+  }, []);
+
   /**
    * Update recipient input and resolve address
    */
-  const setRecipient = useCallback(async (input: string) => {
-    setState(prev => ({
-      ...prev,
-      recipientInput: input,
-      resolvedAddress: null,
-      resolvedUsername: null,
-      lookupError: null,
-    }));
-
-    if (!input) return;
-
-    // Direct address input
-    if (input.startsWith('0x')) {
-      if (isValidAddress(input)) {
-        setState(prev => ({
-          ...prev,
-          resolvedAddress: input,
-        }));
+  const setRecipient = useCallback(
+    async (input: string) => {
+      // Clear any pending lookup
+      if (lookupTimeoutRef.current) {
+        clearTimeout(lookupTimeoutRef.current);
       }
-      return;
-    }
 
-    // @username or 6-digit ID - would need WebSocket lookup
-    // For Phase 2, we'll just support direct addresses
-    // Phase 3 will add username/ID lookup via WebSocket
-    if (input.startsWith('@') || /^\d{6}$/.test(input)) {
       setState(prev => ({
         ...prev,
-        lookupError:
-          'Username/ID lookup coming in Phase 3. Use 0x address for now.',
+        recipientInput: input,
+        resolvedAddress: null,
+        resolvedUsername: null,
+        lookupError: null,
+        isLookingUp: false,
       }));
-    }
-  }, []);
+
+      if (!input) return;
+
+      // Direct address input - validate immediately
+      if (input.startsWith('0x')) {
+        if (input.length === 42 && isValidAddress(input)) {
+          setState(prev => ({
+            ...prev,
+            resolvedAddress: input,
+          }));
+        }
+        return;
+      }
+
+      // @username or 6-digit ID - need WebSocket lookup
+      const isUsername =
+        input.startsWith('@') || /^[a-zA-Z][a-zA-Z0-9_]{2,}$/.test(input);
+      const isSixDigit = /^\d{6}$/.test(input);
+
+      if (isUsername || isSixDigit) {
+        // Check if WebSocket is connected
+        if (!isConnected) {
+          setState(prev => ({
+            ...prev,
+            lookupError: 'Not connected to relay. Use 0x address instead.',
+          }));
+          return;
+        }
+
+        // Debounce the lookup
+        setState(prev => ({ ...prev, isLookingUp: true }));
+
+        lookupTimeoutRef.current = setTimeout(async () => {
+          try {
+            const user = await lookupAny(input);
+            setState(prev => ({
+              ...prev,
+              isLookingUp: false,
+              resolvedAddress: user.address,
+              resolvedUsername: user.username,
+              lookupError: null,
+            }));
+          } catch (error) {
+            setState(prev => ({
+              ...prev,
+              isLookingUp: false,
+              lookupError:
+                error instanceof Error ? error.message : 'User not found',
+            }));
+          }
+        }, 500); // 500ms debounce
+      }
+    },
+    [isConnected],
+  );
 
   /**
    * Update payment amount
@@ -152,6 +201,9 @@ export function useSendPayment() {
    * Reset the form
    */
   const reset = useCallback(() => {
+    if (lookupTimeoutRef.current) {
+      clearTimeout(lookupTimeoutRef.current);
+    }
     setState({
       recipientInput: '',
       resolvedAddress: null,
@@ -168,6 +220,7 @@ export function useSendPayment() {
   return {
     ...state,
     balance,
+    isConnected,
     setRecipient,
     setAmount,
     setMemo,
