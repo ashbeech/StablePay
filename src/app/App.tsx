@@ -2,23 +2,25 @@
  * StablePay Application Entry Point
  *
  * Initializes the app by:
- * 1. Checking if wallet exists (mnemonic in keychain)
- * 2. Checking if onboarding was completed
- * 3. Loading wallet address if available
- * 4. Rendering appropriate screen based on state
+ * 1. Initializing SQLite database
+ * 2. Checking if wallet exists (mnemonic in keychain)
+ * 3. Checking if onboarding was completed
+ * 4. Loading wallet address if available
+ * 5. Connecting to WebSocket relay
+ * 6. Rendering appropriate screen based on state
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Navigation } from './Navigation';
-import { colors } from './theme';
+import { colors, typography, spacing } from './theme';
 import { Logo } from '../shared/components';
 import { useAppStore } from '../store';
 import {
   getMnemonic,
   isOnboardingComplete,
-  getX25519PrivateKey,
+  initDatabase,
 } from '../core/storage';
 import { deriveEthereumWallet, deriveX25519Keys } from '../core/crypto';
 import { wsClient, registerUser } from '../core/websocket';
@@ -35,6 +37,9 @@ export function App() {
 
   const initializeApp = async () => {
     try {
+      // Initialize SQLite database
+      await initDatabase();
+
       // Check if onboarding was completed
       const onboardingDone = await isOnboardingComplete();
       setOnboardingComplete(onboardingDone);
@@ -47,16 +52,9 @@ export function App() {
           const wallet = await deriveEthereumWallet(mnemonic);
           setWalletAddress(wallet.address);
 
-          // Get or derive X25519 keys
-          let x25519PublicKeyBase64 = await getX25519PrivateKey();
-          if (!x25519PublicKeyBase64) {
-            const x25519Keys = await deriveX25519Keys(mnemonic);
-            x25519PublicKeyBase64 = x25519Keys.publicKeyBase64;
-          } else {
-            // We have the private key, need to derive public
-            const x25519Keys = await deriveX25519Keys(mnemonic);
-            x25519PublicKeyBase64 = x25519Keys.publicKeyBase64;
-          }
+          // Derive X25519 keys
+          const x25519Keys = await deriveX25519Keys(mnemonic);
+          const x25519PublicKeyBase64 = x25519Keys.publicKeyBase64;
 
           // Initialize WebSocket connection
           wsClient.initialize(wallet.privateKeyHex, wallet.address);
@@ -65,7 +63,7 @@ export function App() {
           // Register with relay once connected
           wsClient.onStateChange(state => {
             if (state.isAuthenticated) {
-              registerUser(x25519PublicKeyBase64!);
+              registerUser(x25519PublicKeyBase64);
             }
           });
         }
@@ -93,6 +91,7 @@ export function App() {
             color={colors.primary}
             style={styles.spinner}
           />
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaProvider>
     );
@@ -113,6 +112,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   spinner: {
-    marginTop: 32,
+    marginTop: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSize.sm,
+    color: colors.textTertiary,
   },
 });

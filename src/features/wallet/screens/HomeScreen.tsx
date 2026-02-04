@@ -21,13 +21,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, spacing, header as headerConfig } from '../../../app/theme';
+import {
+  colors,
+  spacing,
+  typography,
+  header as headerConfig,
+} from '../../../app/theme';
 import { Logo } from '../../../shared/components';
 import { useWebSocket } from '../../../shared/hooks';
 import { BalanceDisplay } from '../components/BalanceDisplay';
 import { ActionButtons } from '../components/ActionButtons';
 import { TransactionList } from '../components/TransactionList';
 import { useBalance } from '../hooks/useBalance';
+import { useTransactions } from '../hooks/useTransactions';
 import { onIncomingRequest } from '../../../core/websocket';
 import { expireOldRequests } from '../../payments/services/paymentRequestService';
 import { useAppStore, type PaymentRequest } from '../../../store';
@@ -37,9 +43,12 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { transactions, pendingRequests } = useAppStore();
-  const { balance, isLoading, refreshBalance } = useBalance();
+  const { pendingRequests } = useAppStore();
+  const { balance, isLoading: isBalanceLoading, refreshBalance } = useBalance();
+  const { transactions, isSyncing, syncTransactions } = useTransactions();
   const { isAuthenticated, connectionState } = useWebSocket();
+
+  const isLoading = isBalanceLoading || isSyncing;
 
   // Handle incoming payment requests
   useEffect(() => {
@@ -84,11 +93,8 @@ export function HomeScreen() {
   }, [navigation]);
 
   const handleProfilePress = useCallback(() => {
-    Alert.alert(
-      'Coming Soon',
-      'Profile screen will be implemented in Phase 4.',
-    );
-  }, []);
+    navigation.navigate('Profile');
+  }, [navigation]);
 
   const handleRequestPress = useCallback(
     (request: PaymentRequest) => {
@@ -98,8 +104,8 @@ export function HomeScreen() {
   );
 
   const handleRefresh = useCallback(async () => {
-    await refreshBalance();
-  }, [refreshBalance]);
+    await Promise.all([refreshBalance(), syncTransactions()]);
+  }, [refreshBalance, syncTransactions]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

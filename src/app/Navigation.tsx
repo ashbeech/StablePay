@@ -16,6 +16,7 @@ import {
   ReceiveScreen,
   RequestDetailsScreen,
 } from '../features/payments';
+import { ProfileScreen } from '../features/profile';
 import { useAppStore } from '../store';
 
 export type RootStackParamList = {
@@ -24,8 +25,7 @@ export type RootStackParamList = {
   Send: undefined;
   Receive: undefined;
   RequestDetails: { requestId: string };
-  // Future screens:
-  // Profile: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -62,6 +62,7 @@ export function Navigation() {
                 presentation: 'modal',
               }}
             />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
           </>
         )}
       </Stack.Navigator>
