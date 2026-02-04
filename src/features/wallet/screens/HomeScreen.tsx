@@ -3,12 +3,12 @@
  *
  * Main wallet interface showing:
  * - Header with profile button and logo
- * - Balance display
+ * - Balance display (fetched from blockchain)
  * - Pay/Receive action buttons
  * - Recent activity list
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   Text,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -25,6 +26,7 @@ import { Logo } from '../../../shared/components';
 import { BalanceDisplay } from '../components/BalanceDisplay';
 import { ActionButtons } from '../components/ActionButtons';
 import { TransactionList } from '../components/TransactionList';
+import { useBalance } from '../hooks/useBalance';
 import { useAppStore } from '../../../store';
 import type { RootStackParamList } from '../../../app/Navigation';
 
@@ -32,40 +34,37 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { balance, isBalanceLoading, transactions, pendingRequests } =
-    useAppStore();
+  const { transactions, pendingRequests } = useAppStore();
+  const { balance, isLoading, refreshBalance } = useBalance();
 
-  const handlePay = () => {
-    // TODO: Navigate to Send screen
+  const handlePay = useCallback(() => {
+    navigation.navigate('Send');
+  }, [navigation]);
+
+  const handleReceive = useCallback(() => {
     Alert.alert(
       'Coming Soon',
-      'Send payment functionality will be implemented in Phase 2.',
+      'Request payment functionality will be implemented in Phase 3.',
     );
-  };
+  }, []);
 
-  const handleReceive = () => {
-    // TODO: Navigate to Receive screen
+  const handleProfilePress = useCallback(() => {
     Alert.alert(
       'Coming Soon',
-      'Request payment functionality will be implemented in Phase 2.',
+      'Profile screen will be implemented in Phase 4.',
     );
-  };
+  }, []);
 
-  const handleProfilePress = () => {
-    // TODO: Navigate to Profile screen
-    Alert.alert(
-      'Coming Soon',
-      'Profile screen will be implemented in Phase 2.',
-    );
-  };
-
-  const handleRequestPress = () => {
-    // TODO: Show request details
+  const handleRequestPress = useCallback(() => {
     Alert.alert(
       'Coming Soon',
       'Request details will be implemented in Phase 3.',
     );
-  };
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    await refreshBalance();
+  }, [refreshBalance]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -86,12 +85,19 @@ export function HomeScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         {/* Balance */}
         <BalanceDisplay
           balance={balance}
           currency="dUSDT"
-          isLoading={isBalanceLoading}
+          isLoading={isLoading}
         />
 
         {/* Action Buttons */}
