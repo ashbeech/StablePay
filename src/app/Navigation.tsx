@@ -11,17 +11,21 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { OnboardingScreen } from '../features/onboarding';
 import { HomeScreen } from '../features/wallet';
-import { SendScreen } from '../features/payments';
+import {
+  SendScreen,
+  ReceiveScreen,
+  RequestDetailsScreen,
+} from '../features/payments';
 import { useAppStore } from '../store';
 
 export type RootStackParamList = {
   Onboarding: undefined;
   Home: undefined;
   Send: undefined;
+  Receive: undefined;
+  RequestDetails: { requestId: string };
   // Future screens:
-  // Receive: undefined;
   // Profile: undefined;
-  // RequestDetails: { requestId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -42,18 +46,20 @@ export function Navigation() {
             name="Onboarding"
             component={OnboardingScreen}
             options={{
-              gestureEnabled: false, // Can't swipe back during onboarding
+              gestureEnabled: false,
               animation: 'fade',
             }}
           />
         ) : (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Send" component={SendScreen} />
+            <Stack.Screen name="Receive" component={ReceiveScreen} />
             <Stack.Screen
-              name="Send"
-              component={SendScreen}
+              name="RequestDetails"
+              component={RequestDetailsScreen}
               options={{
-                presentation: 'card',
+                presentation: 'modal',
               }}
             />
           </>
