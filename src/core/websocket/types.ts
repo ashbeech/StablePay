@@ -71,15 +71,35 @@ export interface LookupResultMessage {
 }
 
 export type ServerMessage =
-  | { type: 'auth_success'; payload: { address: string; username?: string; sixDigitId: string } }
+  | {
+      type: 'auth_success';
+      payload: { address: string; username?: string; sixDigitId: string };
+    }
   | { type: 'auth_error'; payload: { error: string } }
-  | { type: 'register_success'; payload: { username?: string; sixDigitId: string } }
+  | {
+      type: 'register_success';
+      payload: { username?: string; sixDigitId: string };
+    }
   | { type: 'register_error'; payload: { error: string } }
   | LookupResultMessage
   | { type: 'lookup_error'; payload: { query: string; error: string } }
-  | { type: 'payment_request'; payload: { from: string; requestId: string; encrypted: string; expiresAt: number } }
-  | { type: 'request_cancelled'; payload: { requestId: string; cancelledBy: string } }
-  | { type: 'request_paid'; payload: { requestId: string; txHash: string; paidBy: string } }
+  | {
+      type: 'payment_request';
+      payload: {
+        from: string;
+        requestId: string;
+        encrypted: string;
+        expiresAt: number;
+      };
+    }
+  | {
+      type: 'request_cancelled';
+      payload: { requestId: string; cancelledBy: string };
+    }
+  | {
+      type: 'request_paid';
+      payload: { requestId: string; txHash: string; paidBy: string };
+    }
   | { type: 'error'; payload: { error: string } }
   | { type: 'pong'; payload: { timestamp: number } };
 

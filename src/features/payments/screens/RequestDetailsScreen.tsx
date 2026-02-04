@@ -101,7 +101,10 @@ export function RequestDetailsScreen() {
 
       Alert.alert(
         'Payment Sent!',
-        `Successfully paid $${request.amount}.\n\nTx: ${txHash.slice(0, 20)}...`,
+        `Successfully paid $${request.amount}.\n\nTx: ${txHash.slice(
+          0,
+          20,
+        )}...`,
         [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     } catch (error) {
@@ -140,7 +143,12 @@ export function RequestDetailsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Button title="← Back" onPress={handleBack} variant="outline" size="small" />
+          <Button
+            title="← Back"
+            onPress={handleBack}
+            variant="outline"
+            size="small"
+          />
           <Text style={styles.headerTitle}>Request</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -159,7 +167,12 @@ export function RequestDetailsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Button title="← Back" onPress={handleBack} variant="outline" size="small" />
+        <Button
+          title="← Back"
+          onPress={handleBack}
+          variant="outline"
+          size="small"
+        />
         <Text style={styles.headerTitle}>Payment Request</Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -178,7 +191,8 @@ export function RequestDetailsScreen() {
             <Text style={styles.statusText}>
               {isActive
                 ? 'Pending'
-                : request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                : request.status.charAt(0).toUpperCase() +
+                  request.status.slice(1)}
             </Text>
           </View>
 

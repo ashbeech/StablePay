@@ -104,7 +104,12 @@ export function ReceiveScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
-          <Button title="← Back" onPress={handleBack} variant="outline" size="small" />
+          <Button
+            title="← Back"
+            onPress={handleBack}
+            variant="outline"
+            size="small"
+          />
           <Text style={styles.headerTitle}>Request Payment</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -125,13 +130,20 @@ export function ReceiveScreen() {
 
           <View style={styles.section}>
             <Text style={styles.label}>Amount</Text>
-            <AmountInput value={amount} onChangeValue={setAmount} currency="dUSDT" />
+            <AmountInput
+              value={amount}
+              onChangeValue={setAmount}
+              currency="dUSDT"
+            />
           </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>Note (optional)</Text>
             <View style={styles.noteContainer}>
-              <Text style={[styles.noteText, !memo && styles.notePlaceholder]} numberOfLines={2}>
+              <Text
+                style={[styles.noteText, !memo && styles.notePlaceholder]}
+                numberOfLines={2}
+              >
                 {memo || "What's this for?"}
               </Text>
             </View>
@@ -155,25 +167,43 @@ export function ReceiveScreen() {
           <View style={styles.divider} />
 
           <Text style={styles.sectionTitle}>Share Your Info</Text>
-          <Text style={styles.sectionSubtitle}>Others can send you payments using:</Text>
+          <Text style={styles.sectionSubtitle}>
+            Others can send you payments using:
+          </Text>
 
-          <TouchableOpacity style={styles.infoCard} onPress={handleCopyUsername} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.infoCard}
+            onPress={handleCopyUsername}
+            activeOpacity={0.7}
+          >
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Your @username</Text>
-              <Text style={styles.infoValue}>{username ? `@${username}` : 'Not set'}</Text>
+              <Text style={styles.infoValue}>
+                {username ? `@${username}` : 'Not set'}
+              </Text>
             </View>
             <Text style={styles.copyHint}>Tap to copy</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.infoCard} onPress={handleCopySixDigitId} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.infoCard}
+            onPress={handleCopySixDigitId}
+            activeOpacity={0.7}
+          >
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Your 6-Digit ID</Text>
-              <Text style={styles.infoValue}>{sixDigitId || 'Not registered'}</Text>
+              <Text style={styles.infoValue}>
+                {sixDigitId || 'Not registered'}
+              </Text>
             </View>
             <Text style={styles.copyHint}>Tap to copy</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.infoCard} onPress={handleCopyAddress} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.infoCard}
+            onPress={handleCopyAddress}
+            activeOpacity={0.7}
+          >
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Wallet Address</Text>
               <Text style={styles.infoValueSmall} numberOfLines={1}>
@@ -239,7 +269,11 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.error, fontSize: typography.fontSize.sm },
   sendButton: { marginBottom: spacing.lg },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.lg,
+  },
   sectionTitle: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
@@ -261,13 +295,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   infoContent: { flex: 1 },
-  infoLabel: { fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: 2 },
+  infoLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textTertiary,
+    marginBottom: 2,
+  },
   infoValue: {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textPrimary,
   },
-  infoValueSmall: { fontSize: typography.fontSize.sm, color: colors.textPrimary, fontFamily: 'monospace' },
+  infoValueSmall: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textPrimary,
+    fontFamily: 'monospace',
+  },
   copyHint: { fontSize: typography.fontSize.xs, color: colors.primary },
   registrationNote: {
     fontSize: typography.fontSize.xs,

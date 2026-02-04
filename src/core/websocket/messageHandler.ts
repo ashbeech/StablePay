@@ -89,7 +89,10 @@ async function handleMessage(message: ServerMessage): Promise<void> {
       break;
 
     case 'register_error':
-      console.error('[MessageHandler] Registration error:', message.payload.error);
+      console.error(
+        '[MessageHandler] Registration error:',
+        message.payload.error,
+      );
       break;
 
     case 'error':
@@ -122,7 +125,12 @@ function handleLookupError(message: {
 
 async function handleIncomingPaymentRequest(message: {
   type: 'payment_request';
-  payload: { from: string; requestId: string; encrypted: string; expiresAt: number };
+  payload: {
+    from: string;
+    requestId: string;
+    encrypted: string;
+    expiresAt: number;
+  };
 }): Promise<void> {
   try {
     const privateKeyBase64 = await getX25519PrivateKey();
@@ -188,5 +196,8 @@ function handleRegisterSuccess(message: {
     store.setUsername(message.payload.username);
   }
   store.setSixDigitId(message.payload.sixDigitId);
-  console.log('[MessageHandler] Registered with ID:', message.payload.sixDigitId);
+  console.log(
+    '[MessageHandler] Registered with ID:',
+    message.payload.sixDigitId,
+  );
 }
